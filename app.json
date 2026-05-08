@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "AI记账",
+    "slug": "ai-account-book",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.aiaccountbook.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "aiaccountbook",
+              "host": "*"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
+      "shortcuts": [
+        {
+          "shortcutId": "quick_expense",
+          "shortcutShortLabel": "快速记支出",
+          "shortcutLongLabel": "打开快速记支出页面",
+          "shortcutUrl": "aiaccountbook://quick-add/expense"
+        },
+        {
+          "shortcutId": "quick_income",
+          "shortcutShortLabel": "记录收入",
+          "shortcutLongLabel": "打开快速记收入页面",
+          "shortcutUrl": "aiaccountbook://quick-add/income"
+        },
+        {
+          "shortcutId": "quick_ai",
+          "shortcutShortLabel": "AI记账",
+          "shortcutLongLabel": "打开AI智能记账",
+          "shortcutUrl": "aiaccountbook://ai"
+        }
+      ]
+    },
+    "scheme": "aiaccountbook",
+    "plugins": [
+      "expo-sqlite",
+      "expo-notifications"
+    ]
+  }
+}

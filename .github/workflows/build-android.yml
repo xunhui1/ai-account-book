@@ -1,0 +1,63 @@
+name: Build Android APK
+
+on:
+  push:
+    tags:
+      - 'v*' # 推送 tag 如 v1.0.0 时触发构建
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build APK
+        run: eas build --platform android --profile preview --local --output ./ai-account-book.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-account-book-apk
+          path: ./ai-account-book.apk
+
+      - name: Create Release & Upload APK
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ./ai-account-book.apk
+          body: |
+            ## AI记账 ${{ github.ref_name }}
+            
+            ### 下载安装
+            下载下方 `ai-account-book.apk` 文件，传到手机安装即可。
+            
+            ### 功能
+            - 📝 快速记账
+            - 🤖 AI智能记账（MiMo大模型）
+            - 📊 月度统计
+            - ⚡ 桌面快捷方式 & Widget
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
