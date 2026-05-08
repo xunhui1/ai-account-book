@@ -27,7 +27,10 @@
               "host": "*"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "shortcuts": [
@@ -55,6 +58,11 @@
     "plugins": [
       "expo-sqlite",
       "expo-notifications"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "95efb99f-4fea-4fd7-98f7-d1d56e0b31d5"
+      }
+    }
   }
 }
