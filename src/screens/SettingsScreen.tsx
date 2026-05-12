@@ -1,7 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Switch, Platform } from 'react-native';
+import { guideAutoRecordPermissions } from '../utils/autoRecord';
 
 export default function SettingsScreen() {
+  const [autoRecordEnabled, setAutoRecordEnabled] = useState(false);
+
   return (
     <View style={styles.container}>
       <View style={styles.section}>
@@ -13,6 +16,37 @@ export default function SettingsScreen() {
         <TouchableOpacity style={styles.item}>
           <Text style={styles.itemLabel}>模型选择</Text>
           <Text style={styles.itemValue}>MiMo-V2.5-Reasoning</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>智能记账</Text>
+        <View style={styles.item}>
+          <View style={{flex: 1}}>
+            <Text style={styles.itemLabel}>🏝️ 灵动岛自动记账</Text>
+            <Text style={{fontSize: 12, color: '#999', marginTop: 2}}>支付后自动弹出记账卡片</Text>
+          </View>
+          <Switch
+            value={autoRecordEnabled}
+            onValueChange={(value) => {
+              if (value && Platform.OS === 'android') {
+                guideAutoRecordPermissions();
+              }
+              setAutoRecordEnabled(value);
+            }}
+            trackColor={{ false: '#ddd', true: '#81C784' }}
+            thumbColor={autoRecordEnabled ? '#4CAF50' : '#f4f3f4'}
+          />
+        </View>
+        <TouchableOpacity style={styles.item} onPress={() => {
+          Alert.alert('监听范围', '选择要自动识别的支付渠道', [
+            { text: '全部开启', onPress: () => {} },
+            { text: '自定义', onPress: () => {} },
+            { text: '取消', style: 'cancel' },
+          ]);
+        }}>
+          <Text style={styles.itemLabel}>监听范围</Text>
+          <Text style={styles.itemValue}>微信 · 支付宝 · 银行 →</Text>
         </TouchableOpacity>
       </View>
 
