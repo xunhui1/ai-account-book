@@ -4,14 +4,7 @@ const path = require('path');
 
 /**
  * Expo Config Plugin: 自动记账灵动岛
- * 
- * 在 prebuild 时自动注入：
- * 1. PaymentNotificationListener.kt
- * 2. FloatingIslandService.kt
- * 3. PaymentListenerModule.kt
- * 4. PaymentListenerPackage.kt
- * 5. AndroidManifest.xml 权限和服务声明
- * 6. MainApplication.kt 中注册 Package
+ * 在 prebuild 后注入原生 Kotlin 代码到 Android 工程
  */
 
 function withAutoRecordNativeFiles(config) {
@@ -21,30 +14,31 @@ function withAutoRecordNativeFiles(config) {
       const projectRoot = config.modRequest.projectRoot;
       const javaDir = path.join(
         projectRoot,
-        'android/app/src/main/java/com/aiaccountbook/app'
+        'android', 'app', 'src', 'main', 'java', 'com', 'aiaccountbook', 'app'
       );
 
-      // 确保目录存在
-      fs.mkdirSync(javaDir, { recursive: true });
+      // 源文件目录 (相对于项目根目录)
+      const pluginSrcDir = path.join(projectRoot, 'plugins', 'auto-record', 'native');
 
-      // 源文件目录
-      const pluginSrcDir = path.join(projectRoot, 'plugins/auto-record/native');
+      // 如果原生源目录不存在则跳过
+      if (!fs.existsSync(pluginSrcDir)) {
+        console.log('[auto-record] native/ dir not found, skipping');
+        return config;
+      }
+
+      // 确保目标目录存在
+      if (!fs.existsSync(javaDir)) {
+        console.log('[auto-record] java dir not found, skipping (prebuild may not have created it yet)');
+        return config;
+      }
 
       // 复制所有 .kt 文件
-      const files = [
-        'PaymentNotificationListener.kt',
-        'FloatingIslandService.kt',
-        'PaymentListenerModule.kt',
-        'PaymentListenerPackage.kt',
-      ];
-
+      const files = fs.readdirSync(pluginSrcDir).filter(f => f.endsWith('.kt'));
       for (const file of files) {
         const src = path.join(pluginSrcDir, file);
         const dest = path.join(javaDir, file);
-        if (fs.existsSync(src)) {
-          fs.copyFileSync(src, dest);
-          console.log(`[auto-record] Copied ${file}`);
-        }
+        fs.copyFileSync(src, dest);
+        console.log(`[auto-record] ✅ Copied ${file}`);
       }
 
       // 修改 MainApplication.kt 注册 PaymentListenerPackage
@@ -57,7 +51,7 @@ function withAutoRecordNativeFiles(config) {
             'PackageList(this).packages.apply {\n          add(PaymentListenerPackage())'
           );
           fs.writeFileSync(mainAppPath, content);
-          console.log('[auto-record] Registered PaymentListenerPackage in MainApplication');
+          console.log('[auto-record] ✅ Registered PaymentListenerPackage in MainApplication');
         }
       }
 
@@ -81,10 +75,15 @@ function withAutoRecordManifest(config) {
     }
     manifest.manifest['uses-permission'] = permissions;
 
-    // 添加 NotificationListenerService
-    const services = mainApplication.service || [];
+    // 添加 services
+    if (!mainApplication.service) {
+      mainApplication.service = [];
+    }
+    const services = mainApplication.service;
+
+    // NotificationListenerService
     const hasListener = services.some(
-      (s) => s.$['android:name'] === '.PaymentNotificationListener'
+      (s) => s.$ && s.$['android:name'] === '.PaymentNotificationListener'
     );
     if (!hasListener) {
       services.push({
@@ -101,9 +100,9 @@ function withAutoRecordManifest(config) {
       });
     }
 
-    // 添加 FloatingIslandService
+    // FloatingIslandService
     const hasFloating = services.some(
-      (s) => s.$['android:name'] === '.FloatingIslandService'
+      (s) => s.$ && s.$['android:name'] === '.FloatingIslandService'
     );
     if (!hasFloating) {
       services.push({
@@ -114,7 +113,6 @@ function withAutoRecordManifest(config) {
       });
     }
 
-    mainApplication.service = services;
     return config;
   });
 }

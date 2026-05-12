@@ -13,61 +13,12 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
 
-/**
- * React Native Bridge Module
- * 
- * 提供给 JS 层的接口：
- * - isNotificationListenerEnabled() : 检查通知监听权限
- * - isOverlayPermissionGranted() : 检查悬浮窗权限
- * - openNotificationListenerSettings() : 跳转通知监听设置
- * - openOverlaySettings() : 跳转悬浮窗设置
- * 
- * 事件（原生 → JS）：
- * - "onPaymentDetected" : 检测到支付通知
- */
 class PaymentListenerModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
     override fun getName(): String = "PaymentListenerModule"
-
-    companion object {
-        private var instance: PaymentListenerModule? = null
-
-        fun getInstance(): PaymentListenerModule? = instance
-
-        /**
-         * 从原生服务调用，向 JS 层发送支付事件
-         */
-        fun emitPaymentEvent(context: ReactApplicationContext?, info: PaymentInfo) {
-            context?.let { ctx ->
-                if (ctx.hasActiveReactInstance()) {
-                    val params = Arguments.createMap().apply {
-                        putDouble("amount", info.amount)
-                        putString("merchant", info.merchant)
-                        putString("source", info.source)
-                        putDouble("timestamp", info.timestamp.toDouble())
-                        putString("rawContent", info.rawContent)
-                    }
-                    ctx.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                        .emit("onPaymentDetected", params)
-                }
-            }
-        }
-    }
-
-    init {
-        instance = this
-        // 注册广播接收器，接收来自 NotificationListener 的支付事件
-        val filter = IntentFilter("com.aiaccountbook.PAYMENT_DETECTED")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            reactContext.registerReceiver(paymentReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            reactContext.registerReceiver(paymentReceiver, filter)
-        }
-    }
 
     private val paymentReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -78,39 +29,43 @@ class PaymentListenerModule(private val reactContext: ReactApplicationContext) :
             val timestamp = intent.getLongExtra("timestamp", System.currentTimeMillis())
             val rawContent = intent.getStringExtra("rawContent") ?: ""
 
-            if (amount > 0) {
-                val info = PaymentInfo(amount, merchant, source, rawContent, timestamp)
-                emitPaymentEvent(reactContext, info)
+            if (amount > 0 && reactContext.hasActiveReactInstance()) {
+                val params = Arguments.createMap().apply {
+                    putDouble("amount", amount)
+                    putString("merchant", merchant)
+                    putString("source", source)
+                    putDouble("timestamp", timestamp.toDouble())
+                    putString("rawContent", rawContent)
+                }
+                reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                    .emit("onPaymentDetected", params)
             }
         }
     }
 
-    /**
-     * 检查通知监听权限是否已开启
-     */
+    init {
+        val filter = IntentFilter("com.aiaccountbook.PAYMENT_DETECTED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            reactContext.registerReceiver(paymentReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            reactContext.registerReceiver(paymentReceiver, filter)
+        }
+    }
+
     @ReactMethod
     fun isNotificationListenerEnabled(promise: Promise) {
         val pkgName = reactContext.packageName
         val flat = Settings.Secure.getString(
             reactContext.contentResolver,
             "enabled_notification_listeners"
-        )
-        if (!TextUtils.isEmpty(flat)) {
-            val names = flat.split(":")
-            for (name in names) {
-                val cn = ComponentName.unflattenFromString(name)
-                if (cn != null && cn.packageName == pkgName) {
-                    promise.resolve(true)
-                    return
-                }
-            }
+        ) ?: ""
+        val enabled = flat.split(":").any { name ->
+            ComponentName.unflattenFromString(name)?.packageName == pkgName
         }
-        promise.resolve(false)
+        promise.resolve(enabled)
     }
 
-    /**
-     * 检查悬浮窗权限
-     */
     @ReactMethod
     fun isOverlayPermissionGranted(promise: Promise) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -120,9 +75,6 @@ class PaymentListenerModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
-    /**
-     * 打开通知监听设置页
-     */
     @ReactMethod
     fun openNotificationListenerSettings() {
         val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
@@ -130,9 +82,6 @@ class PaymentListenerModule(private val reactContext: ReactApplicationContext) :
         reactContext.startActivity(intent)
     }
 
-    /**
-     * 打开悬浮窗权限设置页
-     */
     @ReactMethod
     fun openOverlaySettings() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -145,9 +94,6 @@ class PaymentListenerModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
-    /**
-     * 手动测试灵动岛效果（开发调试用）
-     */
     @ReactMethod
     fun testFloatingIsland(amount: Double, merchant: String, source: String) {
         val intent = Intent(reactContext, FloatingIslandService::class.java).apply {
@@ -156,5 +102,15 @@ class PaymentListenerModule(private val reactContext: ReactApplicationContext) :
             putExtra("source", source)
         }
         reactContext.startService(intent)
+    }
+
+    @ReactMethod
+    fun addListener(eventName: String) {
+        // Required for NativeEventEmitter
+    }
+
+    @ReactMethod
+    fun removeListeners(count: Int) {
+        // Required for NativeEventEmitter
     }
 }
