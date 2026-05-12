@@ -12,6 +12,7 @@ import AIScreen from './src/screens/AIScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import QuickAddScreen from './src/screens/QuickAddScreen';
 import { registerNotifications, scheduleDailyReminder } from './src/utils/notifications';
+import { useAutoRecord } from './src/hooks/useAutoRecord';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -69,6 +70,9 @@ function MainTabs() {
 }
 
 export default function App() {
+  // 启用自动记账（监听支付通知 + 智能分类 + 写入数据库）
+  useAutoRecord(true);
+
   useEffect(() => {
     // 初始化通知权限 & 设置每日记账提醒（默认晚上9点）
     registerNotifications().then(granted => {

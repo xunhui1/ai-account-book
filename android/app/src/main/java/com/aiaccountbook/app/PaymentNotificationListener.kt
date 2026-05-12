@@ -121,6 +121,14 @@ class PaymentNotificationListener : NotificationListenerService() {
     }
 
     private fun showFloatingIsland(info: PaymentInfo) {
+        // 1. 发送事件到 React Native 层
+        val app = application as? MainApplication
+        app?.reactHost?.currentReactContext?.let { context ->
+            val reactContext = context as? com.facebook.react.bridge.ReactApplicationContext
+            PaymentListenerModule.emitPaymentEvent(reactContext, info)
+        }
+
+        // 2. 触发灵动岛悬浮窗
         val intent = Intent(this, FloatingIslandService::class.java).apply {
             putExtra("amount", info.amount)
             putExtra("merchant", info.merchant)
