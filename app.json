@@ -57,8 +57,7 @@
     "scheme": "aiaccountbook",
     "plugins": [
       "expo-sqlite",
-      "expo-notifications",
-      "./plugins/auto-record"
+      "expo-notifications"
     ],
     "extra": {
       "eas": {
